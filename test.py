@@ -21,21 +21,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model_path', type=str, default="ckpt/changerwkv-b_levir.pth", help='path to model file')
 parser.add_argument('--dataset', type=str, default="LEVIR", help='test dataset')
 parser.add_argument('--data_path', type=str, default='data/LEVIR/ABLabel')
+parser.add_argument('--image_dir_a', type=str, default='A')
+parser.add_argument('--image_dir_b', type=str, default='B')
+parser.add_argument('--label_dir', type=str, default='label')
 parser.add_argument('--img_size', type=int, default=256, help='image size')
 parser.add_argument('--save_path', type=str, default="preds/", help='save path of predictions')
+parser.add_argument('--num_workers', type=int, default=0)
 # model
 parser.add_argument('--model_size', type=str, default="base")
 parser.add_argument('--out_channels', type=int, default=1)
 
 opt = parser.parse_args()
 
-test_data = ChangeDetectionDataset(opt.data_path, "test")
-test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
-textfile = os.path.join(opt.data_path, "list/test.txt")
-namelines = []
-with open(textfile, 'r', encoding='utf-8') as file:
-    for c in file.readlines():
-        namelines.append(c.strip('\n').split(' ')[0])
+test_data = ChangeDetectionDataset(
+    opt.data_path, "test", opt.image_dir_a, opt.image_dir_b, opt.label_dir
+)
+test_loader = DataLoader(test_data, batch_size=1, shuffle=False, num_workers=opt.num_workers)
+namelines = [name.strip().split(' ')[0] for name in test_data._list_images]
 
 model = ChangeRWKV(img_size=opt.img_size, num_classes=opt.out_channels, size=opt.model_size)
 state_dict = torch.load(opt.model_path)

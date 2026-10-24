@@ -28,6 +28,9 @@ def parse_option():
     # io
     parser.add_argument('--dataset', type=str, default='LEVIR')
     parser.add_argument('--data_dir', type=str, default='data/LEVIR/ABLabel')
+    parser.add_argument('--image_dir_a', type=str, default='A')
+    parser.add_argument('--image_dir_b', type=str, default='B')
+    parser.add_argument('--label_dir', type=str, default='label')
     parser.add_argument('--img_size', type=int, default=256)
     parser.add_argument('--pretrain_dir', type=str, default='ckpt/vrwkv_b.pth')
     parser.add_argument('--output_dir', type=str, default='./output', help='output director')
@@ -60,10 +63,10 @@ def parse_option():
 
 
 def build_loader(opt):
-    train_data = ChangeDetectionDataset(opt.data_dir, "train")
+    train_data = ChangeDetectionDataset(opt.data_dir, "train", opt.image_dir_a, opt.image_dir_b, opt.label_dir)
     train_loader = DataLoader(train_data, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers,
                               pin_memory=True, drop_last=True)
-    val_data = ChangeDetectionDataset(opt.data_dir, "val")
+    val_data = ChangeDetectionDataset(opt.data_dir, "val", opt.image_dir_a, opt.image_dir_b, opt.label_dir)
     val_loader = DataLoader(val_data, batch_size=opt.batch_size if opt.dataset != "WHU" else 4, shuffle=False, num_workers=opt.num_workers,
                             pin_memory=True, drop_last=True)
     return train_loader, val_loader
@@ -98,7 +101,7 @@ def main(opt):
         params += torch.prod(torch.tensor(param.data.shape))
     print("Number of model parameters {}".format(params))
 
-    train_hook = xlsxwriter.Workbook(f'ChangeRWKV-{opt.model_size[0]}_{opt.dataset}_train.xlsx')
+    train_hook = xlsxwriter.Workbook(os.path.join(opt.output_dir, f'ChangeRWKV-{opt.model_size[0]}_{opt.dataset}_train.xlsx'))
     train_record = train_hook.add_worksheet()
     train_record.write('A1', 'epoch')
     train_record.write('B1', 'Pre')
@@ -107,7 +110,7 @@ def main(opt):
     train_record.write('E1', 'IoU')
     train_record.write('F1', 'acc')
     train_record.write('G1', 'loss')
-    val_hook = xlsxwriter.Workbook(f'ChangeRWKV-{opt.model_size[0]}_{opt.dataset}_val.xlsx')
+    val_hook = xlsxwriter.Workbook(os.path.join(opt.output_dir, f'ChangeRWKV-{opt.model_size[0]}_{opt.dataset}_val.xlsx'))
     val_record = val_hook.add_worksheet()
     val_record.write('A1', 'epoch')
     val_record.write('B1', 'Pre')
