@@ -33,6 +33,18 @@ bash prepare_server_data.sh /home/xxj/Data
 
 The environment includes the CUDA 12.8 toolkit and Ninja. The model JIT-compiles its WKV CUDA extension at first import, so `nvcc` and `g++` must be available. The first train or test launch spends extra time compiling.
 
+## Model complexity
+
+After activating `changerwkv-rs`, install the profiling dependency and profile one paired 256x256 input. This imports/compiles the CUDA WKV extension but does not load the pretrained checkpoint:
+
+```bash
+python -m pip install -r requirements_profile.txt
+CUDA_VISIBLE_DEVICES=0 python profile_model.py --model-size base --device cuda:0 \
+  --output ChangeRWKV_work_dirs/profile_256.json
+```
+
+The output lists unsupported operators. fvcore cannot count the custom WKV CUDA kernel, so its reported FLOPs exclude that work and must be treated as a partial count.
+
 ## Train
 
 ```bash
