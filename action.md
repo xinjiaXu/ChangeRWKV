@@ -21,7 +21,7 @@ git switch reproduce
 git pull --ff-only
 ```
 
-## Environment, data, and pretrained weight
+## Environment, data, and optional pretrained weight
 
 ```bash
 bash setup_server_env.sh
@@ -32,6 +32,8 @@ bash prepare_server_data.sh /home/xxj/Data
 ```
 
 The environment includes the CUDA 12.8 toolkit and Ninja. The model JIT-compiles its WKV CUDA extension at first import, so `nvcc` and `g++` must be available. The first train or test launch spends extra time compiling.
+
+The official Hierarchical RWKV encoder checkpoint is optional. To train from random initialization without downloading it, use `PRETRAINED=none`; this is a scratch-trained configuration and differs from the pretrained setup in the paper.
 
 ## LEVIR-CD and LEVIR-CD-PLUS image sizes
 
@@ -64,13 +66,13 @@ Defaults: base model, 256 input, batch 32, 200 epochs, Adam, lr `1e-5`, cosine s
 Example for the raw LEVIR-CD dataset:
 
 ```bash
-GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircd
+PRETRAINED=none GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircd
 ```
 
 LEVIR-CD-PLUS uses the same on-the-fly patch handling:
 
 ```bash
-GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircdplus
+PRETRAINED=none GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircdplus
 ```
 
 Each run directory retains `last.pth` and at most the two newest `EpochN.pth` files. Older numbered checkpoints in that run directory are pruned at startup and as training continues. The model does not choose a best-validation checkpoint.

@@ -36,6 +36,8 @@ def parse_option():
     parser.add_argument('--patch_size', type=int, default=0,
                         help='tile paired images and labels into square patches on read; 0 disables tiling')
     parser.add_argument('--pretrain_dir', type=str, default='ckpt/vrwkv_b.pth')
+    parser.add_argument('--no-pretrained', action='store_true',
+                        help='train from random initialization without loading an encoder checkpoint')
     parser.add_argument('--output_dir', type=str, default='./output', help='output director')
     # model
     parser.add_argument('--model_size', type=str, default="base")
@@ -79,7 +81,9 @@ def build_loader(opt):
 
 def build_model(opt):
     model = ChangeRWKV(img_size=opt.img_size, num_classes=opt.out_channels, size=opt.model_size)
-    if opt.pretrain_dir is not None:
+    if opt.no_pretrained:
+        print('Training ChangeRWKV from random initialization; no encoder checkpoint loaded.')
+    elif opt.pretrain_dir is not None:
         pretrained_dict = torch.load(opt.pretrain_dir)
         model_dict = model.state_dict()
         load_key, no_load_key, temp_dict = [], [], {}

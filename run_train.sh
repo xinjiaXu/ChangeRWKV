@@ -9,6 +9,7 @@ num_workers="${NUM_WORKERS:-8}"
 batch_size="${BATCH_SIZE:-32}"
 pretrained="${PRETRAINED:-$repo_root/ckpt/vrwkv_b.pth}"
 patch_size=0
+train_from_scratch=0
 
 if [[ $# -ne 1 ]]; then
   printf 'Usage: %s {levircd|levircdplus|cdd|whucd|sysucd}\n' "$0" >&2
@@ -33,7 +34,9 @@ for split in train val; do
   done
 done
 
-if [[ ! -f "$pretrained" ]]; then
+if [[ "$pretrained" == "none" ]]; then
+  train_from_scratch=1
+elif [[ ! -f "$pretrained" ]]; then
   printf 'Hierarchical RWKV encoder checkpoint not found: %s\n' "$pretrained" >&2
   printf 'Download the official vrwkv_b.pth checkpoint as described in README.md.\n' >&2
   exit 1
@@ -43,7 +46,7 @@ command -v g++ >/dev/null 2>&1 || { printf 'g++ is required to build the WKV CUD
 
 cd "$repo_root"
 export CUDA_VISIBLE_DEVICES="$gpu_ids"
-python train.py \
+train_args=( \
   --dataset "$dataset" \
   --data_dir "$dataset_root" \
   --image_dir_a "$image_a" \
@@ -51,7 +54,14 @@ python train.py \
   --label_dir "$label_dir" \
   --patch_size "$patch_size" \
   --batch_size "$batch_size" \
-  --pretrain_dir "$pretrained" \
   --output_dir "$repo_root/ChangeRWKV_work_dirs/$1" \
   --devices "$devices" \
   --num_workers "$num_workers"
+)
+if [[ "$train_from_scratch" -eq 1 ]]; then
+  train_args+=(--no-pretrained)
+  printf 'Training from scratch: Hierarchical RWKV encoder checkpoint loading is disabled.\n'
+else
+  train_args+=(--pretrain_dir "$pretrained")
+fi
+python train.py "${train_args[@]}"

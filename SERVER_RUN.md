@@ -17,14 +17,14 @@ The NVIDIA driver reported by `nvidia-smi` is not the CUDA compiler. The setup s
 
 ## Pretrained encoder
 
-The official README provides the Hierarchical RWKV encoder checkpoint URL. Download it into the expected path:
+The official README provides the Hierarchical RWKV encoder checkpoint URL. To use the pretrained configuration, download it into the expected path:
 
 ```bash
 mkdir -p ckpt
 wget -O ckpt/vrwkv_b.pth https://github.com/ChangeRWKV/ChangeRWKV/releases/download/v0.1/vrwkv_b.pth
 ```
 
-Training checks that this file exists before starting. To use a different path, set `PRETRAINED=/path/to/vrwkv_b.pth`.
+Training uses this checkpoint by default and checks that it exists before starting. To use a different path, set `PRETRAINED=/path/to/vrwkv_b.pth`. To skip the download and train from random initialization, set `PRETRAINED=none`; the resulting model is a scratch-trained configuration, not the paper's pretrained setup.
 
 ## Data paths
 
@@ -57,6 +57,12 @@ bash run_train.sh sysucd
 ```
 
 The wrappers keep upstream defaults: base model, image size 256, batch size 32, 200 epochs, Adam, learning rate `1e-5`, cosine schedule, 20 warmup epochs, and weight decay `1e-4`. Set `BATCH_SIZE=2` or another value to control memory. WHU validation uses batch size 4 in the original code. Runtime defaults are one visible GPU and 8 data workers; use `GPU_IDS=1` to select GPU 1, or `GPU_IDS=0,1 DEVICES=2` to use both GPUs.
+
+For training from scratch on GPU 1, for example:
+
+```bash
+PRETRAINED=none GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircd
+```
 
 Each epoch writes `last.pth`; `EpochN.pth` files are also saved from epoch 30 onward. Only the two newest numbered checkpoints are retained, alongside `last.pth`; old numbered files are pruned at startup and after each numbered save. The code logs validation metrics but does not select a best checkpoint. Checkpoints, `config.json`, `res.out`, and XLSX logs are written below `ChangeRWKV_work_dirs/<key>/`.
 
