@@ -33,6 +33,10 @@ bash prepare_server_data.sh /home/xxj/Data
 
 The environment includes the CUDA 12.8 toolkit and Ninja. The model JIT-compiles its WKV CUDA extension at first import, so `nvcc` and `g++` must be available. The first train or test launch spends extra time compiling.
 
+## LEVIR-CD and LEVIR-CD-PLUS image sizes
+
+The model's fusion module is configured for 256x256 inputs. The current server datasets may contain original 1024x1024 images, while LEVIR-CD-PLUS may already contain cropped tiles. The `levircd` and `levircdplus` launchers now split images and masks into aligned, non-overlapping 256x256 patches while loading; 1024x1024 inputs become 16 samples, and already-cropped 256x256 files remain one sample. No dataset files are modified or duplicated. Any input dimensions must be divisible by 256.
+
 ## Model complexity
 
 After activating `changerwkv-rs`, install the profiling dependency and profile one paired 256x256 input. This imports/compiles the CUDA WKV extension but does not load the pretrained checkpoint:
@@ -55,7 +59,21 @@ bash run_train.sh whucd
 bash run_train.sh sysucd
 ```
 
-Defaults: base model, 256 input, batch 32, 200 epochs, Adam, lr `1e-5`, cosine scheduler, 20 warmup epochs, weight decay `1e-4`. Select GPU 1 with `GPU_IDS=1`; use both with `GPU_IDS=0,1 DEVICES=2`.
+Defaults: base model, 256 input, batch 32, 200 epochs, Adam, lr `1e-5`, cosine scheduler, 20 warmup epochs, weight decay `1e-4`. Set `BATCH_SIZE=2` (or another value) to control memory. Select GPU 1 with `GPU_IDS=1`; use both with `GPU_IDS=0,1 DEVICES=2`.
+
+Example for the raw LEVIR-CD dataset:
+
+```bash
+GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircd
+```
+
+LEVIR-CD-PLUS uses the same on-the-fly patch handling:
+
+```bash
+GPU_IDS=1 DEVICES=1 NUM_WORKERS=4 BATCH_SIZE=2 bash run_train.sh levircdplus
+```
+
+Each run directory retains `last.pth` and at most the two newest `EpochN.pth` files. Older numbered checkpoints in that run directory are pruned at startup and as training continues. The model does not choose a best-validation checkpoint.
 
 ## Test
 

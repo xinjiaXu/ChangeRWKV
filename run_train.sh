@@ -6,7 +6,9 @@ data_root="${DATA_ROOT:-/home/xxj/Data}"
 gpu_ids="${GPU_IDS:-0}"
 devices="${DEVICES:-1}"
 num_workers="${NUM_WORKERS:-8}"
+batch_size="${BATCH_SIZE:-32}"
 pretrained="${PRETRAINED:-$repo_root/ckpt/vrwkv_b.pth}"
+patch_size=0
 
 if [[ $# -ne 1 ]]; then
   printf 'Usage: %s {levircd|levircdplus|cdd|whucd|sysucd}\n' "$0" >&2
@@ -14,8 +16,8 @@ if [[ $# -ne 1 ]]; then
 fi
 
 case "$1" in
-  levircd) dataset="LEVIR"; dataset_root="$data_root/LEVIR_CD"; image_a="A"; image_b="B"; label_dir="label" ;;
-  levircdplus) dataset="LEVIR+"; dataset_root="$data_root/LEVIR_CD_PLUS/cut_data"; image_a="A"; image_b="B"; label_dir="label" ;;
+  levircd) dataset="LEVIR"; dataset_root="$data_root/LEVIR_CD"; image_a="A"; image_b="B"; label_dir="label"; patch_size=256 ;;
+  levircdplus) dataset="LEVIR+"; dataset_root="$data_root/LEVIR_CD_PLUS/cut_data"; image_a="A"; image_b="B"; label_dir="label"; patch_size=256 ;;
   cdd) dataset="CDD"; dataset_root="$data_root/CDD"; image_a="A"; image_b="B"; label_dir="OUT" ;;
   whucd) dataset="WHU"; dataset_root="$data_root/WHUCD"; image_a="A"; image_b="B"; label_dir="label" ;;
   sysucd) dataset="SYSU"; dataset_root="$data_root/SYSU_CD"; image_a="time1"; image_b="time2"; label_dir="label" ;;
@@ -47,6 +49,8 @@ python train.py \
   --image_dir_a "$image_a" \
   --image_dir_b "$image_b" \
   --label_dir "$label_dir" \
+  --patch_size "$patch_size" \
+  --batch_size "$batch_size" \
   --pretrain_dir "$pretrained" \
   --output_dir "$repo_root/ChangeRWKV_work_dirs/$1" \
   --devices "$devices" \

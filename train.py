@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import warnings
@@ -32,6 +33,8 @@ def parse_option():
     parser.add_argument('--image_dir_b', type=str, default='B')
     parser.add_argument('--label_dir', type=str, default='label')
     parser.add_argument('--img_size', type=int, default=256)
+    parser.add_argument('--patch_size', type=int, default=0,
+                        help='tile paired images and labels into square patches on read; 0 disables tiling')
     parser.add_argument('--pretrain_dir', type=str, default='ckpt/vrwkv_b.pth')
     parser.add_argument('--output_dir', type=str, default='./output', help='output director')
     # model
@@ -63,10 +66,12 @@ def parse_option():
 
 
 def build_loader(opt):
-    train_data = ChangeDetectionDataset(opt.data_dir, "train", opt.image_dir_a, opt.image_dir_b, opt.label_dir)
+    train_data = ChangeDetectionDataset(opt.data_dir, "train", opt.image_dir_a, opt.image_dir_b,
+                                        opt.label_dir, patch_size=opt.patch_size)
     train_loader = DataLoader(train_data, batch_size=opt.batch_size, shuffle=True, num_workers=opt.num_workers,
                               pin_memory=True, drop_last=True)
-    val_data = ChangeDetectionDataset(opt.data_dir, "val", opt.image_dir_a, opt.image_dir_b, opt.label_dir)
+    val_data = ChangeDetectionDataset(opt.data_dir, "val", opt.image_dir_a, opt.image_dir_b,
+                                      opt.label_dir, patch_size=opt.patch_size)
     val_loader = DataLoader(val_data, batch_size=opt.batch_size if opt.dataset != "WHU" else 4, shuffle=False, num_workers=opt.num_workers,
                             pin_memory=True, drop_last=True)
     return train_loader, val_loader
@@ -88,6 +93,17 @@ def build_model(opt):
         model_dict.update(temp_dict)
         model.load_state_dict(model_dict)
     return model
+
+
+def prune_epoch_checkpoints(output_dir, keep=2):
+    epoch_checkpoints = []
+    for filename in os.listdir(output_dir):
+        match = re.fullmatch(r'Epoch(\d+)\.pth', filename)
+        if match:
+            epoch_checkpoints.append((int(match.group(1)), os.path.join(output_dir, filename)))
+    epoch_checkpoints.sort(reverse=True)
+    for _, checkpoint_path in epoch_checkpoints[keep:]:
+        os.remove(checkpoint_path)
 
 
 def main(opt):
@@ -151,6 +167,7 @@ def main(opt):
         if (epoch >= 30) & (epoch % 1 == 0):
             torch.save(model.state_dict(), os.path.join(opt.output_dir, f"Epoch{epoch}.pth"))
             print("Model saved: {}!".format(os.path.join(opt.output_dir, f"Epoch{epoch}.pth")))
+            prune_epoch_checkpoints(opt.output_dir, keep=2)
         row = row + 1
     train_hook.close()
     val_hook.close()
@@ -247,6 +264,7 @@ def val(val_loader, model, criterion, epoch, tool4metric, val_record, row, col):
 if __name__ == '__main__':
     opt = parse_option()
     os.makedirs(opt.output_dir, exist_ok=True)
+    prune_epoch_checkpoints(opt.output_dir, keep=2)
     path = os.path.join(opt.output_dir, 'config.json')
     with open(path, 'w') as f:
         json.dump(vars(opt), f, indent=2)

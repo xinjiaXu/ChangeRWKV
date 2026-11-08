@@ -36,6 +36,8 @@ bash prepare_server_data.sh /home/xxj/Data
 
 The loader accepts the upstream flat layout with `list/*.txt` and the server's split layout. For split layout it enumerates filenames from each split's label folder, so no list files are needed. Matching filenames must exist in T1, T2, and label folders.
 
+The ChangeRWKV fusion module expects 256x256 inputs. The `levircd` and `levircdplus` launchers now tile each paired image and mask into aligned, non-overlapping 256x256 patches during loading. This supports raw 1024x1024 LEVIR images and pre-cropped 256x256 data without modifying or copying dataset files. Dimensions must be divisible by 256; other dataset launchers retain their existing loading behavior.
+
 | Key | Dataset root | T1 | T2 | Mask |
 | --- | --- | --- | --- | --- |
 | `levircd` | `/home/xxj/Data/LEVIR_CD` | `A` | `B` | `label` |
@@ -54,9 +56,9 @@ bash run_train.sh whucd
 bash run_train.sh sysucd
 ```
 
-The wrappers keep upstream defaults: base model, image size 256, batch size 32, 200 epochs, Adam, learning rate `1e-5`, cosine schedule, 20 warmup epochs, and weight decay `1e-4`. WHU validation uses batch size 4 in the original code. Runtime defaults are one visible GPU and 8 data workers; use `GPU_IDS=1` to select GPU 1, or `GPU_IDS=0,1 DEVICES=2` to use both GPUs.
+The wrappers keep upstream defaults: base model, image size 256, batch size 32, 200 epochs, Adam, learning rate `1e-5`, cosine schedule, 20 warmup epochs, and weight decay `1e-4`. Set `BATCH_SIZE=2` or another value to control memory. WHU validation uses batch size 4 in the original code. Runtime defaults are one visible GPU and 8 data workers; use `GPU_IDS=1` to select GPU 1, or `GPU_IDS=0,1 DEVICES=2` to use both GPUs.
 
-Each epoch writes `last.pth`; `EpochN.pth` files are also saved from epoch 30 onward. The code logs validation metrics but does not select a best checkpoint. Checkpoints, `config.json`, `res.out`, and XLSX logs are written below `ChangeRWKV_work_dirs/<key>/`.
+Each epoch writes `last.pth`; `EpochN.pth` files are also saved from epoch 30 onward. Only the two newest numbered checkpoints are retained, alongside `last.pth`; old numbered files are pruned at startup and after each numbered save. The code logs validation metrics but does not select a best checkpoint. Checkpoints, `config.json`, `res.out`, and XLSX logs are written below `ChangeRWKV_work_dirs/<key>/`.
 
 ## Test
 
